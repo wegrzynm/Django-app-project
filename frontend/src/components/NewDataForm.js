@@ -7,24 +7,30 @@ import { API_URL } from "../constants";
 
 class NewDataForm extends React.Component {
   state = {
-    pk: 0,
-    data: ""
+    inputs: [{ pk: 0, data: "" }]
   };
 
   componentDidMount() {
     if (this.props.data) {
       const { pk, data } = this.props.data;
-      this.setState({ pk, data });
+      this.setState({ inputs: [{ pk, data }] });
     }
   }
 
   onChange = e => {
-    this.setState({ [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    const inputIndex = Number(name.substring(4)); // Pobieramy indeks z nazwy pola 'dataX'
+    
+    this.setState(prevState => ({
+      inputs: prevState.inputs.map((input, index) =>
+        index === inputIndex ? { ...input, data: value } : input
+      )
+    }));
   };
 
   createData = e => {
     e.preventDefault();
-    axios.post(API_URL, this.state).then(() => {
+    axios.post(API_URL, this.state.inputs).then(() => {
       this.props.resetState();
       this.props.toggle();
     });
@@ -32,10 +38,16 @@ class NewDataForm extends React.Component {
 
   editData = e => {
     e.preventDefault();
-    axios.put(API_URL + this.state.pk, this.state).then(() => {
+    axios.put(API_URL + this.state.inputs[0].pk, this.state.inputs[0]).then(() => {
       this.props.resetState();
       this.props.toggle();
     });
+  };
+
+  addNewInput = () => {
+    this.setState(prevState => ({
+      inputs: [...prevState.inputs, { pk: 0, data: "" }]
+    }));
   };
 
   defaultIfEmpty = value => {
@@ -45,15 +57,18 @@ class NewDataForm extends React.Component {
   render() {
     return (
       <Form onSubmit={this.props.data ? this.editData : this.createData}>
-        <FormGroup>
-          <Label for="data">Data:</Label>
-          <Input
-            type="text"
-            name="data"
-            onChange={this.onChange}
-            value={this.defaultIfEmpty(this.state.data)}
-          />
-        </FormGroup>
+        {this.state.inputs.map((input, index) => (
+          <FormGroup key={index}>
+            <Label for={`data${index}`}>Data:</Label>
+            <Input
+              type="text"
+              name={`data${index}`}
+              onChange={this.onChange}
+              value={this.defaultIfEmpty(input.data)}
+            />
+          </FormGroup>
+        ))}
+        <Button type="button" onClick={this.addNewInput}>Add New Input</Button>
         <Button>Send</Button>
       </Form>
     );
